@@ -1,0 +1,19 @@
+[
+    {
+        "symbol": "TEST",
+        "quantity": 1,
+        "order_type": "market",
+        "status": "AWAITING APPROVAL",
+        "submitted": false,
+        "approved": false
+    },
+    {
+        "symbol": "SIRI",
+        "quantity": 1,
+        "order_type": "market",
+        "status": "AWAITING APPROVAL",
+        "submitted": false,
+        "approved": false,
+        "handoff_status": "BLOCKED: TEST MODE ENABLED"
+    }
+]

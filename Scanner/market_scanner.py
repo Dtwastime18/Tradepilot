@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime
 import broker
 from broker.robinhood_broker import RobinhoodBroker
+from broker.execution_ticket import build_execution_ticket
 from broker.robinhood_review_bridge import (
     SanitizedOrderDetails,
     ReviewEquityOrderCapability,
@@ -1643,6 +1644,10 @@ def run_scanner():
                     test_mode=TEST_MODE,
                 )
                 preview["handoff_status"] = handoff["status"]
+                execution_ticket = build_execution_ticket(preview)
+                preview["execution_ticket_status"] = (
+                    "READY" if execution_ticket is not None else "BLOCKED"
+                )
 
             elif (
                 not entry["triggered"]
@@ -1774,6 +1779,7 @@ def run_scanner():
                 f"Status: {preview['status']} "
                 f"Block Reason: {block_reason} "
                 f" Handoff: {preview.get('handoff_status', 'N/A')}"
+                f" Ticket: {preview.get('execution_ticket_status', 'N/A')}"
             )
     else:
         print("  None")

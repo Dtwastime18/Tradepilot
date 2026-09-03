@@ -1,5 +1,6 @@
 import subprocess
 import uuid
+from decimal import Decimal, InvalidOperation
 
 class RobinhoodBroker:
 
@@ -89,19 +90,19 @@ class RobinhoodBroker:
         Still does NOT submit a real order.
         """
 
-        if not approved:
+        if approved is not True:
             return {
                 **preview,
                 "status": "AWAITING APPROVAL",
                 "approved": False,
-                "submitted": False
+                "submitted": preview.get("submitted", False)
             }
 
         return {
             **preview,
             "status": "APPROVED - NOT SUBMITTED",
             "approved": True,
-            "submitted": False
+            "submitted": preview.get("submitted", False)
         } 
     def can_submit_order(
         self,
@@ -144,7 +145,7 @@ class RobinhoodBroker:
         if not self.connected:
             return "BLOCKED: BROKER NOT CONNECTED"
 
-        if not preview.get("approved", False):
+        if preview.get("approved") is not True:
             return "BLOCKED: ORDER NOT APPROVED"
 
         order_id = preview.get("order_id")
@@ -154,5 +155,26 @@ class RobinhoodBroker:
 
         if preview.get("submitted", False):
             return "BLOCKED: ORDER ALREADY SUBMITTED"
+        try:
+            quantity = Decimal(str(preview.get("quantity")))
+        except (InvalidOperation, ValueError, TypeError):
+            return "BLOCKED: INVALID QUANTITY"
+
+        if not quantity.is_finite() or quantity <= 0:
+            return "BLOCKED: INVALID QUANTITY"
+
+        order_type = preview.get("order_type")
+
+        if order_type not in {"market", "limit"}:
+            return "BLOCKED: INVALID ORDER TYPE"
+
+        if order_type == "limit":
+            try:
+                limit_price = Decimal(str(preview.get("limit_price")))
+            except (InvalidOperation, ValueError, TypeError):
+                return "BLOCKED: INVALID LIMIT PRICE"
+
+            if not limit_price.is_finite() or limit_price <= 0:
+                return "BLOCKED: INVALID LIMIT PRICE"   
 
         return "READY FOR MANUAL SUBMISSION"

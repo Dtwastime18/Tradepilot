@@ -37,3 +37,30 @@ def validate_execution_ticket(ticket: ExecutionTicket) -> bool:
         return False
     
     return True 
+
+def build_execution_ticket(preview):
+    if preview.get("approved") is not True:
+        return None
+
+    if preview.get("submitted", False):
+        return None
+
+    if preview.get("handoff_status") != "READY FOR MANUAL SUBMISSION":
+        return None
+    
+    ticket = ExecutionTicket(
+        symbol=preview["symbol"],
+        side=preview.get("side", "buy"),
+        quantity=Decimal(str(preview["quantity"])),
+        order_type=preview["order_type"],
+        limit_price=(
+            Decimal(str(preview["limit_price"]))
+            if preview.get("limit_price") is not None
+            else None
+        ),
+
+    )
+    if not validate_execution_ticket(ticket):
+        return None
+
+    return ticket

@@ -17,7 +17,8 @@ from broker.robinhood_mcp_session import open_mcp_session
 import json
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
-TEST_MODE = True
+TEST_MODE = False
+LIVE_MANUAL_MODE = True
 HISTORY_FILE = Path( "Data/scan_history.csv")
 REPORTS_DIR = Path("Reports")
 
@@ -1507,6 +1508,10 @@ def run_scanner():
 
     if TEST_MODE:
         print("TEST MODE ENABLED - no real orders can be submitted.")
+    elif LIVE_MANUAL_MODE:
+        print("LIVE MANUAL MODE ENABLED - review and execution tickets only; orders remain manual.")
+    else:
+        raise RuntimeError("Unsafe mode configuration: TEST_MODE or LIVE_MANUAL_MODE must be enabled.")
 
     print()
     print("=" * 70)

@@ -15,6 +15,8 @@ from broker.robinhood_review_bridge import (
 )
 from broker.robinhood_mcp_session import open_mcp_session
 import json
+import io
+import urllib.request
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
 TEST_MODE = False
@@ -65,8 +67,8 @@ async def review_triggered_order(symbol, quantity=1, triggered_today=False):
 # SETTINGS
 # ============================================================
 
-MIN_PRICE = 3.00
-MAX_PRICE = 50.00
+MIN_PRICE = 5.00
+MAX_PRICE = 25.00
 
 MIN_AVG_VOLUME = 1_000_000
 
@@ -95,6 +97,49 @@ SUPPORT_DISTANCE = 0.05
 # ============================================================
 # WATCHLIST
 # ============================================================
+def get_us_stock_universe():
+    """Return U.S.-listed stock symbols from Nasdaq Trader symbol directories."""
+
+    urls = [
+        "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt",
+        "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",
+    ]
+
+    symbols = set()
+
+    for url in urls:
+        with urllib.request.urlopen(url, timeout=30) as response:
+            text = response.read().decode("utf-8")
+
+        df = pd.read_csv(io.StringIO(text), sep="|")
+
+        symbol_column = "Symbol" if "Symbol" in df.columns else "ACT Symbol"
+
+        # Exclude Nasdaq test securities when the field is available.
+        if "Test Issue" in df.columns:
+            df = df[df["Test Issue"] == "N"]
+        # Exclude ETFs.
+        if "ETF" in df.columns:
+            df = df[df["ETF"] == "N"]   
+        # Exclude warrants, units, rights, and preferred securities.
+        if "Security Name" in df.columns:
+            excluded_types = r"\b(?:Warrant|Warrants|Unit|Units|Right|Rights|Preferred|Preference)\b"
+            df = df[
+                ~df["Security Name"].astype(str).str.contains(
+                    excluded_types,
+                    case=False,
+                    regex=True,
+                    na=False,
+                )
+            ]    
+
+        for symbol in df[symbol_column].dropna():
+            symbol = str(symbol).strip()
+
+            if symbol and symbol != "File Creation Time":
+                symbols.add(symbol)
+
+    return sorted(symbols)
 
 WATCHLIST = [
     "JBLU",
@@ -844,14 +889,15 @@ def grade_setup(
 # ANALYZE ONE STOCK
 # ============================================================
 
-def analyze_stock(symbol):
+def analyze_stock(symbol, data=None):
 
     print()
     print("=" * 70)
     print(f"DAILY ANALYSIS: {symbol}")
     print("=" * 70)
 
-    data = get_daily_data(symbol)
+    if data is None:
+        data = get_daily_data(symbol)
 
     if data is None:
 
@@ -866,6 +912,58 @@ def analyze_stock(symbol):
         data["Volume"].tail(60).mean()
     )
 
+    # Fast whole-market pre-filter.
+    # Skip symbols that do not meet the core strategy requirements
+    # before running MACD and support/resistance calculations.
+    if not (MIN_PRICE <= current_price <= MAX_PRICE):
+        return None
+
+    if avg_volume < MIN_AVG_VOLUME:
+        return None
+
+def get_daily_data_batch(symbols):
+    try:
+        data = yf.download(
+            tickers=symbols,
+            period=DATA_PERIOD,
+            interval=TIMEFRAME,
+            auto_adjust=False,
+            progress=False,
+            group_by="ticker",
+            threads=True,
+        )
+
+        if data.empty:
+            return {}
+
+        result = {}
+
+        for symbol in symbols:
+            try:
+                symbol_data = data[symbol].copy()
+
+                if symbol_data.empty:
+                    continue
+
+                required = ["Open", "High", "Low", "Close", "Volume"]
+
+                if not all(column in symbol_data.columns for column in required):
+                    continue
+
+                symbol_data = symbol_data.dropna()
+
+                if not symbol_data.empty:
+                    result[symbol] = symbol_data
+
+            except Exception:
+                continue
+
+        return result
+
+    except Exception as error:
+        print(f"ERROR downloading batch: {error}")
+        return {}    
+    
     # --------------------------------------------------------
     # MACD
     # --------------------------------------------------------
@@ -1256,29 +1354,29 @@ def detect_scan_changes(results):
             ""
         )
 
-    if current_grade != previous_grade:
+        if current_grade != previous_grade:
 
-        changes.append({
-            "symbol": symbol,
-            "change_type": "GRADE CHANGE",
-            "previous_grade": previous_grade,
-            "current_grade": current_grade,
-            "previous_trade_status": previous_trade_status,
-            "current_trade_status": current_trade_status
-        })
+            changes.append({
+                "symbol": symbol,
+                "change_type": "GRADE CHANGE",
+                "previous_grade": previous_grade,
+                "current_grade": current_grade,
+                "previous_trade_status": previous_trade_status,
+                "current_trade_status": current_trade_status
+            })
 
-    elif current_trade_status != previous_trade_status:
+        elif current_trade_status != previous_trade_status:
 
-        changes.append({
-            "symbol": symbol,
-            "change_type": "TRADE STATUS CHANGE",
-            "previous_grade": previous_grade,
-            "current_grade": current_grade,
-            "previous_trade_status": previous_trade_status,
-            "current_trade_status": current_trade_status
-        })
+            changes.append({
+                "symbol": symbol,
+                "change_type": "TRADE STATUS CHANGE",
+                "previous_grade": previous_grade,
+                "current_grade": current_grade,
+                "previous_trade_status": previous_trade_status,
+                "current_trade_status": current_trade_status
+            })
 
-        return changes
+    return changes
 
     
 
@@ -1564,10 +1662,19 @@ def run_scanner():
         order_previews.append(
             test_preview
         )
+    scan_symbols = get_us_stock_universe()
 
-    for symbol in WATCHLIST:
+    print(f"U.S. stock universe loaded: {len(scan_symbols):,} symbols")
 
-        result = analyze_stock(symbol)
+    test_symbols = scan_symbols[:1000]
+    batch_data = get_daily_data_batch(test_symbols)
+
+    for symbol in test_symbols:
+
+        result = analyze_stock(
+            symbol,
+            data=batch_data.get(symbol)
+        )
 
         if result is not None:
  

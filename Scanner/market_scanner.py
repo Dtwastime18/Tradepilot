@@ -1666,19 +1666,34 @@ def run_scanner():
 
     print(f"U.S. stock universe loaded: {len(scan_symbols):,} symbols")
 
-    test_symbols = scan_symbols[:1000]
-    batch_data = get_daily_data_batch(test_symbols)
+    BATCH_SIZE = 250
 
-    for symbol in test_symbols:
+    for start in range(0, len(scan_symbols), BATCH_SIZE):
 
-        result = analyze_stock(
-            symbol,
-            data=batch_data.get(symbol)
+        batch_symbols = scan_symbols[start:start + BATCH_SIZE]
+
+        print(
+            f"\nDownloading market batch "
+            f"{start + 1}-{min(start + BATCH_SIZE, len(scan_symbols))} "
+            f"of {len(scan_symbols):,}..."
         )
 
-        if result is not None:
- 
-            results.append(result)
+        batch_data = get_daily_data_batch(batch_symbols)
+
+        for symbol in batch_symbols:
+
+            symbol_data = batch_data.get(symbol)
+
+            if symbol_data is None:
+                continue
+
+            result = analyze_stock(
+                symbol,
+                data=symbol_data
+            )
+
+            if result is not None:
+                results.append(result)
 
     changes = detect_scan_changes(results)
 

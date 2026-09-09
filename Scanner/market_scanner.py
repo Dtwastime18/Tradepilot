@@ -121,9 +121,9 @@ def get_us_stock_universe():
         # Exclude ETFs.
         if "ETF" in df.columns:
             df = df[df["ETF"] == "N"]   
-        # Exclude warrants, units, rights, and preferred securities.
+        # Exclude ETNs, warrants, units, rights, and preferred securities.
         if "Security Name" in df.columns:
-            excluded_types = r"\b(?:Warrant|Warrants|Unit|Units|Right|Rights|Preferred|Preference)\b"
+            excluded_types = r"\b(?:ETN|ETNs|Exchange-Traded Note|Exchange Traded Note|Warrant|Warrants|Unit|Units|Right|Rights|Preferred|Preference)\b"
             df = df[
                 ~df["Security Name"].astype(str).str.contains(
                     excluded_types,

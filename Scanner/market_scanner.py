@@ -200,7 +200,48 @@ def get_daily_data(symbol):
 
         return None
 
+def get_daily_data_batch(symbols):
+    try:
+        data = yf.download(
+            tickers=symbols,
+            period=DATA_PERIOD,
+            interval=TIMEFRAME,
+            auto_adjust=False,
+            progress=False,
+            group_by="ticker",
+            threads=True,
+        )
 
+        if data.empty:
+            return {}
+
+        result = {}
+
+        for symbol in symbols:
+            try:
+                symbol_data = data[symbol].copy()
+
+                if symbol_data.empty:
+                    continue
+
+                required = ["Open", "High", "Low", "Close", "Volume"]
+
+                if not all(column in symbol_data.columns for column in required):
+                    continue
+
+                symbol_data = symbol_data.dropna()
+
+                if not symbol_data.empty:
+                    result[symbol] = symbol_data
+
+            except Exception:
+                continue
+
+        return result
+
+    except Exception as error:
+        print(f"ERROR downloading batch: {error}")
+        return {}    
 # ============================================================
 # MACD
 # ============================================================
@@ -921,48 +962,7 @@ def analyze_stock(symbol, data=None):
     if avg_volume < MIN_AVG_VOLUME:
         return None
 
-def get_daily_data_batch(symbols):
-    try:
-        data = yf.download(
-            tickers=symbols,
-            period=DATA_PERIOD,
-            interval=TIMEFRAME,
-            auto_adjust=False,
-            progress=False,
-            group_by="ticker",
-            threads=True,
-        )
 
-        if data.empty:
-            return {}
-
-        result = {}
-
-        for symbol in symbols:
-            try:
-                symbol_data = data[symbol].copy()
-
-                if symbol_data.empty:
-                    continue
-
-                required = ["Open", "High", "Low", "Close", "Volume"]
-
-                if not all(column in symbol_data.columns for column in required):
-                    continue
-
-                symbol_data = symbol_data.dropna()
-
-                if not symbol_data.empty:
-                    result[symbol] = symbol_data
-
-            except Exception:
-                continue
-
-        return result
-
-    except Exception as error:
-        print(f"ERROR downloading batch: {error}")
-        return {}    
     
     # --------------------------------------------------------
     # MACD

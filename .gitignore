@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 Reports/daily_report_*.txt
+
+Data/broker_queue.json
+Data/scan_history.csv

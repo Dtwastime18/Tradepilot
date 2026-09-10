@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from datetime import datetime
 from turtle import position
+import json
+from pathlib import Path
+
+POSITIONS_FILE = Path("Data/positions.json")
 
 
 @dataclass
@@ -76,3 +80,71 @@ def calculate_realized_pnl(position):
         raise ValueError("Closed position is missing exit price.")
 
     return (position.exit_price - position.entry_price) * position.quantity
+
+def save_positions(positions):
+    POSITIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    data = []
+
+    for position in positions:
+        data.append(
+            {
+                "symbol": position.symbol,
+                "quantity": str(position.quantity),
+                "entry_price": str(position.entry_price),
+                "target_price": str(position.target_price),
+                "fill_time": position.fill_time.isoformat(),
+                "status": position.status,
+                "exit_price": (
+                    str(position.exit_price)
+                    if position.exit_price is not None
+                    else None
+                ),
+                "exit_time": (
+                    position.exit_time.isoformat()
+                    if position.exit_time is not None
+                    else None
+                ),
+            }
+        )
+
+    POSITIONS_FILE.write_text(
+        json.dumps(data, indent=2),
+        encoding="utf-8",
+    )
+
+def load_positions():
+    if not POSITIONS_FILE.exists():
+        return []
+
+    text = POSITIONS_FILE.read_text(encoding="utf-8").strip()
+
+    if not text:
+        return []
+
+    data = json.loads(text)
+    positions = []
+
+    for item in data:
+        positions.append(
+            Position(
+                symbol=item["symbol"],
+                quantity=Decimal(item["quantity"]),
+                entry_price=Decimal(item["entry_price"]),
+                target_price=Decimal(item["target_price"]),
+                fill_time=datetime.fromisoformat(item["fill_time"]),
+                status=item["status"],
+                exit_price=(
+                    Decimal(item["exit_price"])
+                    if item["exit_price"] is not None
+                    else None
+                ),
+                exit_time=(
+                    datetime.fromisoformat(item["exit_time"])
+                    if item["exit_time"] is not None
+                    else None
+                ),
+            )
+        )
+
+    return positions   

@@ -67,3 +67,12 @@ def close_position(
 
     position.status = "CLOSED"
     return position
+
+def calculate_realized_pnl(position):
+    if position.status != "CLOSED":
+        raise ValueError("Realized P/L requires a closed position.")
+
+    if position.exit_price is None:
+        raise ValueError("Closed position is missing exit price.")
+
+    return (position.exit_price - position.entry_price) * position.quantity

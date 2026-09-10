@@ -148,3 +148,10 @@ def load_positions():
         )
 
     return positions   
+
+def get_active_positions(positions):
+    return [
+        position
+        for position in positions
+        if position.status in {"OPEN", "TARGET REACHED"}
+    ]

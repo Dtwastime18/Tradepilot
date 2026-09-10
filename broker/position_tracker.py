@@ -32,6 +32,7 @@ def create_position_from_fill(
         fill_time=fill_time,
         status="OPEN",
     )
+
 def update_position_status(position, current_price):
     current_price = Decimal(str(current_price))
 
@@ -41,4 +42,14 @@ def update_position_status(position, current_price):
     if current_price >= position.target_price:
         position.status = "TARGET REACHED"
 
+    return position
+
+def close_position(position, exit_confirmed=False):
+    if position.status != "TARGET REACHED":
+        raise ValueError("Position target has not been reached.")
+
+    if exit_confirmed is not True:
+        raise ValueError("Position requires a confirmed exit.")
+
+    position.status = "CLOSED"
     return position

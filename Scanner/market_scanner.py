@@ -17,7 +17,12 @@ from broker.robinhood_mcp_session import open_mcp_session
 import json
 import io
 import urllib.request
-from broker.position_tracker import load_positions, get_active_positions
+from broker.position_tracker import (
+    load_positions,
+    get_active_positions,
+    update_position_status,
+    save_positions,
+)
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
 TEST_MODE = False
@@ -1699,6 +1704,24 @@ def run_scanner():
 
             if result is not None:
                 results.append(result)
+        for position in active_positions:
+            if position.symbol == "TEST":
+                continue   
+
+            symbol_data = get_daily_data(position.symbol)
+             
+
+            if symbol_data is None or symbol_data.empty:
+                continue
+
+            current_price = float(symbol_data["Close"].iloc[-1])
+
+            update_position_status(
+                position,
+                current_price,
+            )
+
+        save_positions(positions)   
 
     changes = detect_scan_changes(results)
 

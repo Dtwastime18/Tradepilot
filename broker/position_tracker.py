@@ -32,3 +32,13 @@ def create_position_from_fill(
         fill_time=fill_time,
         status="OPEN",
     )
+def update_position_status(position, current_price):
+    current_price = Decimal(str(current_price))
+
+    if position.status != "OPEN":
+        return position
+
+    if current_price >= position.target_price:
+        position.status = "TARGET REACHED"
+
+    return position

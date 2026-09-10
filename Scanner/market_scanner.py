@@ -17,7 +17,7 @@ from broker.robinhood_mcp_session import open_mcp_session
 import json
 import io
 import urllib.request
-from broker.position_tracker import load_positions
+from broker.position_tracker import load_positions, get_active_positions
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
 TEST_MODE = False
@@ -1648,7 +1648,9 @@ def run_scanner():
     results = []
     order_previews = []
     positions = load_positions()
+    active_positions = get_active_positions(positions)
     print(f"Persisted positions loaded: {len(positions)}")
+    print(f"Active positions: {len(active_positions)}")
 
     if TEST_MODE:
 

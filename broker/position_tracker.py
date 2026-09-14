@@ -155,3 +155,27 @@ def get_active_positions(positions):
         for position in positions
         if position.status in {"OPEN", "TARGET REACHED"}
     ]
+
+def record_confirmed_fill(
+    *,
+    symbol,
+    quantity,
+    fill_price,
+    target_price,
+    fill_time,
+    fill_confirmed=False,
+):
+    position = create_position_from_fill(
+        symbol=symbol,
+        quantity=quantity,
+        fill_price=fill_price,
+        target_price=target_price,
+        fill_time=fill_time,
+        fill_confirmed=fill_confirmed,
+    )
+
+    positions = load_positions()
+    positions.append(position)
+    save_positions(positions)
+
+    return position

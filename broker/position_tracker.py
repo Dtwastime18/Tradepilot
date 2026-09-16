@@ -247,4 +247,48 @@ def finalize_confirmed_exit(
 
     save_positions(positions)
 
-    return trade_record     
+    return trade_record    
+
+def load_trade_history():
+    if not TRADE_HISTORY_FILE.exists():
+        return []
+
+    text = TRADE_HISTORY_FILE.read_text(encoding="utf-8").strip()
+
+    if not text:
+        return []
+
+    return json.loads(text) 
+
+def calculate_performance_stats(history):
+    total_trades = len(history)
+    wins = 0
+    losses = 0
+    breakevens = 0
+    total_realized_pnl = Decimal("0")
+
+    for trade in history:
+        pnl = Decimal(str(trade["realized_pnl"]))
+        total_realized_pnl += pnl
+
+        if pnl > 0:
+            wins += 1
+        elif pnl < 0:
+            losses += 1
+        else:
+            breakevens += 1
+
+    win_rate = (
+        Decimal(wins) / Decimal(total_trades) * Decimal("100")
+        if total_trades > 0
+        else Decimal("0")
+    )       
+
+    return {
+        "total_trades": total_trades,
+        "wins": wins,
+        "losses": losses,
+        "breakevens": breakevens,
+        "total_realized_pnl": total_realized_pnl,
+        "win_rate": win_rate,   
+    }

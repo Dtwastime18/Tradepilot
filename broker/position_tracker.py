@@ -5,6 +5,7 @@ from turtle import position
 import json
 from pathlib import Path
 
+POSITIONS_FILE = Path("Data/positions.json")
 TRADE_HISTORY_FILE = Path("Data/trade_history.json")
 
 
@@ -213,4 +214,37 @@ def save_trade_record(trade_record):
     TRADE_HISTORY_FILE.write_text(
         json.dumps(history, indent=2),
         encoding="utf-8",
-    )    
+    )  
+
+def finalize_confirmed_exit(
+    position,
+    *,
+    exit_price,
+    exit_time,
+    exit_confirmed=False,
+):
+    close_position(
+        position,
+        exit_price=exit_price,
+        exit_time=exit_time,
+        exit_confirmed=exit_confirmed,
+    )
+
+    trade_record = record_closed_trade(position)
+    save_trade_record(trade_record)
+
+    positions = load_positions()
+
+    for index, saved_position in enumerate(positions):
+        if (
+            saved_position.symbol == position.symbol
+            and saved_position.fill_time == position.fill_time
+        ):
+            positions[index] = position
+            break
+    else:
+        raise ValueError("Position not found in persistent storage.")
+
+    save_positions(positions)
+
+    return trade_record     

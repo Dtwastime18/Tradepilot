@@ -5,7 +5,7 @@ from turtle import position
 import json
 from pathlib import Path
 
-POSITIONS_FILE = Path("Data/positions.json")
+TRADE_HISTORY_FILE = Path("Data/trade_history.json")
 
 
 @dataclass
@@ -179,3 +179,38 @@ def record_confirmed_fill(
     save_positions(positions)
 
     return position
+
+def record_closed_trade(position):
+    if position.status != "CLOSED":
+        raise ValueError("Trade history requires a closed position.")
+
+    realized_pnl = calculate_realized_pnl(position)
+
+    trade_record = {
+        "symbol": position.symbol,
+        "quantity": str(position.quantity),
+        "entry_price": str(position.entry_price),
+        "target_price": str(position.target_price),
+        "fill_time": position.fill_time.isoformat(),
+        "exit_price": str(position.exit_price),
+        "exit_time": position.exit_time.isoformat(),
+        "realized_pnl": str(realized_pnl),
+    }
+
+    return trade_record
+
+def save_trade_record(trade_record):
+    TRADE_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    if TRADE_HISTORY_FILE.exists():
+        text = TRADE_HISTORY_FILE.read_text(encoding="utf-8").strip()
+        history = json.loads(text) if text else []
+    else:
+        history = []
+
+    history.append(trade_record)
+
+    TRADE_HISTORY_FILE.write_text(
+        json.dumps(history, indent=2),
+        encoding="utf-8",
+    )    

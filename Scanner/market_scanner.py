@@ -1,4 +1,5 @@
 import asyncio
+from turtle import position
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -24,6 +25,7 @@ from broker.position_tracker import (
     save_positions,
     load_trade_history,
     calculate_performance_stats,
+    calculate_unrealized_pnl,
 )
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
@@ -1740,24 +1742,45 @@ def run_scanner():
 
             if result is not None:
                 results.append(result)
-        for position in active_positions:
-            if position.symbol == "TEST":
-                continue   
 
-            symbol_data = get_daily_data(position.symbol)
-             
+    # ========================================================
+    # DAILY ACTIVE POSITION MONITORING
+    # ========================================================
 
-            if symbol_data is None or symbol_data.empty:
-                continue
+    for position in active_positions:
+        if position.symbol == "TEST":
+            continue
 
-            current_price = float(symbol_data["Close"].iloc[-1])
+        symbol_data = get_daily_data(
+            position.symbol
+        )
 
-            update_position_status(
-                position,
-                current_price,
-            )
+        if symbol_data is None or symbol_data.empty:
+            continue
 
-        save_positions(positions)   
+        current_price = float(
+            symbol_data["Close"].iloc[-1]
+        )
+
+        unrealized_pnl = calculate_unrealized_pnl(
+            position,
+            current_price,
+        )
+
+        print(
+            f"Open Position: {position.symbol} | "
+            f"Entry ${position.entry_price} | "
+            f"Current ${current_price:.2f} | "
+            f"Qty {position.quantity} | "
+            f"Unrealized P/L ${unrealized_pnl}"
+        )
+
+        update_position_status(
+            position,
+            current_price,
+        )
+
+    save_positions(positions)
 
     changes = detect_scan_changes(results)
 

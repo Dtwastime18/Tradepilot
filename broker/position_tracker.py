@@ -82,6 +82,16 @@ def calculate_realized_pnl(position):
 
     return (position.exit_price - position.entry_price) * position.quantity
 
+def calculate_unrealized_pnl(position, current_price):
+    if position.status != "OPEN":
+        raise ValueError("Unrealized P/L requires an open position.")
+
+    current_price = Decimal(str(current_price))
+
+    return (
+        current_price - position.entry_price
+    ) * position.quantity
+
 def save_positions(positions):
     POSITIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
 

@@ -1423,7 +1423,7 @@ def save_scan_history(results):
                 'score': result['score'],
                 'trade_status': result['trade_status']
             })
-def generate_daily_report(results, changes):
+def generate_daily_report(results, changes, performance_stats):
     
     REPORTS_DIR.mkdir(
         parents=True,
@@ -1453,6 +1453,29 @@ def generate_daily_report(results, changes):
 
         file.write(
             f"Date: {report_date}\n\n"
+        )
+        file.write("PERFORMANCE SUMMARY\n")
+        file.write("-" * 60 + "\n")
+        file.write(
+            f"Total Trades: {performance_stats['total_trades']}\n"
+        )
+        file.write(
+            f"Wins: {performance_stats['wins']}\n"
+
+        )
+        file.write(
+            f"Losses: {performance_stats['losses']}\n"
+        )
+        file.write(
+            f"Breakevens: {performance_stats['breakevens']}\n"
+        )
+        file.write(
+            f"Total Realized P/L: "
+            f"${performance_stats['total_realized_pnl']}\n"
+        )
+        file.write(
+            f"Win Rate: "
+            f"{performance_stats['win_rate']:.2f}%\n\n"
         )
         file.write("SCAN RESULTS\n")
         file.write("-" * 60 + "\n")
@@ -1741,12 +1764,11 @@ def run_scanner():
     save_scan_history(results)
 
     report_file = generate_daily_report(
-        results, 
-        changes
+        results,
+        changes,
+        performance_stats
     )
 
-    
-   
 
     # ========================================================
     # FINAL SUMMARY

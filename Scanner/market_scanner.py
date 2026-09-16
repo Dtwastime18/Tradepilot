@@ -22,6 +22,8 @@ from broker.position_tracker import (
     get_active_positions,
     update_position_status,
     save_positions,
+    load_trade_history,
+    calculate_performance_stats,
 )
 
 BROKER_QUEUE_FILE = Path("Data/broker_queue.json")
@@ -1654,8 +1656,19 @@ def run_scanner():
     order_previews = []
     positions = load_positions()
     active_positions = get_active_positions(positions)
+    trade_history = load_trade_history()
+    performance_stats = calculate_performance_stats(trade_history)
     print(f"Persisted positions loaded: {len(positions)}")
     print(f"Active positions: {len(active_positions)}")
+    print(
+        "Performance: "
+        f"{performance_stats['total_trades']} trades | "
+        f"{performance_stats['wins']} wins | "
+        f"{performance_stats['losses']} losses | "
+        f"{performance_stats['breakevens']} breakevens | "
+        f"P/L ${performance_stats['total_realized_pnl']} | "
+        f"Win Rate {performance_stats['win_rate']:.2f}%"
+    )
 
     if TEST_MODE:
 

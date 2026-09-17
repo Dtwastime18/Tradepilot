@@ -1425,7 +1425,12 @@ def save_scan_history(results):
                 'score': result['score'],
                 'trade_status': result['trade_status']
             })
-def generate_daily_report(results, changes, performance_stats):
+def generate_daily_report(
+    results,
+    changes,
+    performance_stats,
+    open_position_performance,
+):
     
     REPORTS_DIR.mkdir(
         parents=True,
@@ -1479,6 +1484,26 @@ def generate_daily_report(results, changes, performance_stats):
             f"Win Rate: "
             f"{performance_stats['win_rate']:.2f}%\n\n"
         )
+
+        file.write("OPEN POSITION PERFORMANCE\n")
+        file.write("-" * 60 + "\n")
+
+        if open_position_performance:
+            for position_data in open_position_performance:
+                file.write(
+                    f"{position_data['symbol']} | "
+                    f"Qty {position_data['quantity']} | "
+                    f"Entry ${position_data['entry_price']} | "
+                    f"Current ${position_data['current_price']:.2f} | "
+                    f"Target ${position_data['target_price']} | "
+                    f"Unrealized P/L "
+                    f"${position_data['unrealized_pnl']}\n"
+                )
+        else:
+            file.write("No active positions.\n")
+
+        file.write("\n")
+
         file.write("SCAN RESULTS\n")
         file.write("-" * 60 + "\n")
 
@@ -1679,6 +1704,8 @@ def run_scanner():
 
     results = []
     order_previews = []
+    open_position_performance = []
+
     positions = load_positions()
     active_positions = get_active_positions(positions)
     trade_history = load_trade_history()
@@ -1767,6 +1794,17 @@ def run_scanner():
             current_price,
         )
 
+        open_position_performance.append(
+            {
+                "symbol": position.symbol,
+                "quantity": position.quantity,
+                "entry_price": position.entry_price,
+                "current_price": current_price,
+                "target_price": position.target_price,
+                "unrealized_pnl": unrealized_pnl,
+            }
+        )
+
         print(
             f"Open Position: {position.symbol} | "
             f"Entry ${position.entry_price} | "
@@ -1789,7 +1827,8 @@ def run_scanner():
     report_file = generate_daily_report(
         results,
         changes,
-        performance_stats
+        performance_stats,
+        open_position_performance,
     )
 
 

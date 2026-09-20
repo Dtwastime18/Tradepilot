@@ -19,6 +19,7 @@ class Position:
     status: str = "OPEN"
     exit_price: Decimal | None = None
     exit_time: datetime | None = None
+    setup_grade: str | None = None
 
 def create_position_from_fill(
     *,
@@ -106,6 +107,7 @@ def save_positions(positions):
                 "target_price": str(position.target_price),
                 "fill_time": position.fill_time.isoformat(),
                 "status": position.status,
+                "setup_grade": position.setup_grade,
                 "exit_price": (
                     str(position.exit_price)
                     if position.exit_price is not None
